@@ -45,17 +45,17 @@ export async function POST(request) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
         }
 
-        const token = signToken({ userId: user._id, email: user.email });
+        const token = signToken({ userId: user._id, email: user.email, role: user.role });
 
         const response = NextResponse.json(
-            { message: "Login successful", user: { email: user.email, name: user.name } },
+            { message: "Login successful", user: { email: user.email, name: user.name, role: user.role } },
             { status: 200 }
         );
 
         response.cookies.set("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "lax",
             maxAge: 86400, // 1 day
             path: "/",
         });
