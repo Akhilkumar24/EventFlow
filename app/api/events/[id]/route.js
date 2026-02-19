@@ -26,7 +26,7 @@ export async function PUT(request, { params }) {
         const session = await auth();
         const { id } = await params;
 
-        if (!session || session.user.role !== "organizer") {
+        if (!session || (session.user.role !== "organizer" && session.user.role !== "admin")) {
             // In prod, check if session.user.id === event.organizer
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -58,7 +58,7 @@ export async function DELETE(request, { params }) {
         const session = await auth();
         const { id } = await params;
 
-        if (!session || session.user.role !== "organizer") {
+        if (!session || (session.user.role !== "organizer" && session.user.role !== "admin")) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

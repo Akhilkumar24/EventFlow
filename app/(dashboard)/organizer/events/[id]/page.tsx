@@ -15,8 +15,11 @@ import {
     Trash2,
     Check,
     X,
-    Search
+    Search,
+    Gavel,
+    Clock
 } from "lucide-react";
+import AssignJudgesModal from "@/components/dashboards/organizer/AssignJudgesModal";
 
 export default function EventDashboard() {
     const params = useParams(); // useParams returns a readonly object, not a Promise in Client Components
@@ -25,6 +28,45 @@ export default function EventDashboard() {
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
+    const [showJudgeModal, setShowJudgeModal] = useState(false);
+    const [judges, setJudges] = useState([]);
+    const [teams, setTeams] = useState([]);
+    const [teamsLoading, setTeamsLoading] = useState(false);
+
+    useEffect(() => {
+        if (event && activeTab === "judges") {
+            fetchAssignedJudges();
+        } else if (event && activeTab === "teams") {
+            fetchTeams();
+        }
+    }, [event, activeTab]);
+
+    const fetchTeams = async () => {
+        setTeamsLoading(true);
+        try {
+            const res = await fetch(`/api/events/${id}/teams`);
+            if (res.ok) {
+                const data = await res.json();
+                setTeams(data.teams || []);
+            }
+        } catch (error) {
+            console.error("Error fetching teams:", error);
+        } finally {
+            setTeamsLoading(false);
+        }
+    };
+
+    const fetchAssignedJudges = async () => {
+        try {
+            const res = await fetch(`/api/events/${id}/judges`);
+            if (res.ok) {
+                const data = await res.json();
+                setJudges(data.judges || []);
+            }
+        } catch (error) {
+            console.error("Error fetching judges:", error);
+        }
+    };
 
     useEffect(() => {
         if (id) {
@@ -91,14 +133,16 @@ export default function EventDashboard() {
                                     </span>
                                     <span>•</span>
                                     <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                                    <span>•</span>
+                                    <span className="text-red-600 font-medium">Register by: {event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleDateString() : "N/A"}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors">
+                            <Link href={`/organizer/events/${id}/edit`} className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition-colors">
                                 <Edit className="w-4 h-4" />
                                 Edit Event
-                            </button>
+                            </Link>
                             <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors">
                                 <Settings className="w-4 h-4" />
                                 Settings
@@ -108,7 +152,7 @@ export default function EventDashboard() {
 
                     {/* Tabs */}
                     <div className="flex gap-6 mt-4">
-                        {["overview", "participants", "judges", "submissions"].map((tab) => (
+                        {["overview", "teams", "judges"].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -129,6 +173,35 @@ export default function EventDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Content */}
                         <div className="lg:col-span-2 space-y-6">
+
+                            {/* Timeline */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-indigo-600" />
+                                    Event Timeline
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-slate-50 p-4 rounded-lg">
+                                        <p className="text-sm font-medium text-slate-500 mb-1">Start Date</p>
+                                        <p className="text-lg font-semibold text-slate-900">
+                                            {new Date(event.startDate).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-lg">
+                                        <p className="text-sm font-medium text-slate-500 mb-1">End Date</p>
+                                        <p className="text-lg font-semibold text-slate-900">
+                                            {new Date(event.endDate).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-lg">
+                                        <p className="text-sm font-medium text-slate-500 mb-1">Registration Deadline</p>
+                                        <p className="text-lg font-semibold text-slate-900">
+                                            {event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleString() : "N/A"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Quick Stats */}
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -193,11 +266,11 @@ export default function EventDashboard() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-slate-600">Min Team Size</span>
-                                        <span className="font-semibold">{event.minTeamSize}</span>
+                                        <span className="font-semibold text-blue-600">{event.minTeamSize}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-slate-600">Max Team Size</span>
-                                        <span className="font-semibold">{event.maxTeamSize}</span>
+                                        <span className="font-semibold text-blue-600">{event.maxTeamSize}</span>
                                     </div>
                                 </div>
                             </div>
@@ -205,6 +278,138 @@ export default function EventDashboard() {
                     </div>
                 )}
 
+                {activeTab === "judges" && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-slate-900">Assigned Judges</h2>
+                            <button
+                                onClick={() => setShowJudgeModal(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors"
+                            >
+                                <Gavel className="w-4 h-4" />
+                                Assign Judge
+                            </button>
+                        </div>
+
+                        {judges.length === 0 ? (
+                            <div className="bg-white p-12 text-center rounded-xl border border-slate-200 shadow-sm">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Gavel className="w-8 h-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-lg font-medium text-slate-900 mb-2">No Judges Assigned</h3>
+                                <p className="text-slate-500 mb-6">Assign judges to evaluate submissions for this event.</p>
+                                <button
+                                    onClick={() => setShowJudgeModal(true)}
+                                    className="text-indigo-600 font-medium hover:underline"
+                                >
+                                    Assign a Judge
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {judges.map((judge) => (
+                                    <div key={judge._id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-lg">
+                                            {judge.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-900">{judge.name}</h4>
+                                            <p className="text-sm text-slate-500">{judge.email}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "teams" && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-slate-900">Participating Teams</h2>
+                        </div>
+
+                        {teamsLoading ? (
+                            <div className="flex items-center justify-center p-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                            </div>
+                        ) : teams.length === 0 ? (
+                            <div className="bg-white p-12 text-center rounded-xl border border-slate-200 shadow-sm">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Users className="w-8 h-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-lg font-medium text-slate-900 mb-2">No Teams Yet</h3>
+                                <p className="text-slate-500">Teams will appear here once they join the event.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {teams.map((team) => (
+                                    <div key={team._id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative">
+                                        {/* Status Badge */}
+                                        <span className={`absolute top-4 right-4 px-2.5 py-0.5 text-xs font-semibold rounded-full capitalize ${team.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                            team.status === 'disqualified' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
+                                            }`}>
+                                            {team.status || 'Active'}
+                                        </span>
+
+                                        <div className="flex items-center gap-4 mb-6 pr-16">
+                                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-700 font-bold text-lg shrink-0">
+                                                {team.name.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 line-clamp-1">{team.name}</h4>
+                                                <p className="text-sm text-slate-500">Code: <span className="font-mono">{team.inviteCode}</span></p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="border-t border-slate-100 pt-3">
+                                                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider block mb-3">Team Members</span>
+
+                                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                                    {/* Leader */}
+                                                    <div className="flex items-center justify-between group">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs text-amber-700 font-bold shrink-0">
+                                                                {team.leader?.name?.charAt(0)}
+                                                            </div>
+                                                            <span className="text-sm font-medium text-slate-900 truncate max-w-[120px]" title={team.leader?.name}>{team.leader?.name}</span>
+                                                        </div>
+                                                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Leader</span>
+                                                    </div>
+
+                                                    {/* Members */}
+                                                    {team.members?.map((member) => (
+                                                        <div key={member._id} className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-600 font-bold shrink-0">
+                                                                {member.name.charAt(0)}
+                                                            </div>
+                                                            <span className="text-sm text-slate-600 truncate max-w-[150px]" title={member.name}>{member.name}</span>
+                                                        </div>
+                                                    ))}
+
+                                                    {(!team.members || team.members.length === 0) && (
+                                                        <p className="text-xs text-slate-400 italic pl-8">No other members joined yet.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {showJudgeModal && (
+                    <AssignJudgesModal
+                        event={event}
+                        onClose={() => {
+                            setShowJudgeModal(false);
+                            fetchAssignedJudges(); // Refresh list on close
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

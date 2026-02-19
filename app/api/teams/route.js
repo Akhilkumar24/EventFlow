@@ -4,6 +4,7 @@ import Team from "@/models/Team";
 import User from "@/models/User";
 import Event from "@/models/Event";
 import mongoose from "mongoose";
+import { auth } from "@/lib/auth";
 
 // GET all teams
 export async function GET(request) {
@@ -12,20 +13,11 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     let userId = searchParams.get('userId');
 
-    // If no userId in query params, try to get from cookie
+    // If no userId in query params, try to get from session
     if (!userId) {
-      const cookieHeader = request.headers.get("cookie");
-      if (cookieHeader) {
-        const tokenMatch = cookieHeader.match(/token=([^;]+)/);
-        if (tokenMatch) {
-          try {
-            const token = tokenMatch[1];
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            userId = payload.userId;
-          } catch (e) {
-            console.error('Error decoding token:', e);
-          }
-        }
+      const session = await auth();
+      if (session?.user?.id) {
+        userId = session.user.id;
       }
     }
 
@@ -58,7 +50,7 @@ export async function POST(request) {
   try {
     await dbConnect();
     const body = await request.json();
-    let { name, eventId, leaderId, inviteCode } = body;
+    let { name, description, eventId, leaderId, inviteCode, maxMembers } = body;
 
     // If no eventId is provided, find the latest active event
     if (!eventId) {
@@ -107,9 +99,9 @@ export async function POST(request) {
       description: description?.trim() || "",
       event: eventId,
       leader: leaderId,
-      members: [],
-      inviteCode: finalInviteCode,
-      maxMembers: maxMembers || 5,
+      members: [leaderId],
+      inviteCode: generatedInviteCode,
+      maxMembers: maxMembers || 4, // Default max size
       status: "active",
       isVerified: false
     });
@@ -120,7 +112,7 @@ export async function POST(request) {
     return NextResponse.json({ team });
   } catch (error) {
     console.error("Error creating team:", error);
-    
+
     // Handle mongoose validation errors
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(e => e.message);
@@ -129,7 +121,7 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Handle duplicate key errors
     if (error.code === 11000) {
       return NextResponse.json(
@@ -137,7 +129,7 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json({ error: "Failed to create team" }, { status: 500 });
   }
 }

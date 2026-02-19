@@ -354,7 +354,7 @@ export default function ProfilePage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Team Info (Hidden for Judges) */}
-            {displayRole !== "judge" && displayRole !== "admin" && (
+            {displayRole === "participant" && (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />

@@ -13,45 +13,44 @@ export async function POST(request, { params }) {
         }
 
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { score, feedback, criteriaScores } = body;
 
-        // Verify submission exists
+        // Verify query
         const submission = await Submission.findById(id);
         if (!submission) {
             return NextResponse.json({ error: "Submission not found" }, { status: 404 });
         }
 
-        // Add or update the judge's evaluation
-        const existingEvaluationIndex = submission.evaluations.findIndex(
+        // Check if judge has already evaluated
+        const existingEvaluation = submission.evaluations.find(
             (e) => e.judge.toString() === session.user.id
         );
 
-        if (existingEvaluationIndex !== -1) {
-            // Update existing
-            submission.evaluations[existingEvaluationIndex].score = score;
-            submission.evaluations[existingEvaluationIndex].feedback = feedback;
-            submission.evaluations[existingEvaluationIndex].evaluatedAt = new Date();
-        } else {
-            // Add new
-            submission.evaluations.push({
-                judge: session.user.id,
-                score,
-                feedback,
-                evaluatedAt: new Date(),
-            });
+        if (existingEvaluation) {
+            return NextResponse.json({ error: "You have already evaluated this submission." }, { status: 400 });
         }
 
-        // Recalculate average score
-        const totalScore = submission.evaluations.reduce((sum, e) => sum + e.score, 0);
-        submission.totalScore = totalScore;
-        submission.averageScore = totalScore / submission.evaluations.length;
+        // Add new evaluation
+        submission.evaluations.push({
+            judge: session.user.id,
+            score,
+            feedback,
+            criteriaScores,
+            evaluatedAt: new Date(),
+        });
 
         // Add judge to judgedBy list if not present
         if (!submission.judgedBy.includes(session.user.id)) {
             submission.judgedBy.push(session.user.id);
         }
+
+        // Recalculate average score
+        const totalEvaluations = submission.evaluations.length;
+        const totalScore = submission.evaluations.reduce((sum, e) => sum + e.score, 0);
+        submission.totalScore = totalScore;
+        submission.averageScore = totalEvaluations > 0 ? totalScore / totalEvaluations : 0;
 
         await submission.save();
 

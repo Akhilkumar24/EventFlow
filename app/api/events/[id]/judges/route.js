@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
         }
 
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
 
         const event = await Event.findById(id).populate("judges", "name email avatar");
         if (!event) {
@@ -38,7 +38,7 @@ export async function POST(request, { params }) {
         }
 
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { judgeId } = body;
 
@@ -64,6 +64,12 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: "Judge already assigned" }, { status: 400 });
         }
 
+        // Lazy migration: Ensure registrationDeadline exists before saving
+        if (!event.registrationDeadline) {
+            console.log(`Auto-migrating registrationDeadline for event ${event._id} during judge assignment`);
+            event.registrationDeadline = event.startDate || new Date();
+        }
+
         event.judges.push(judgeId);
         await event.save();
 
@@ -83,7 +89,7 @@ export async function DELETE(request, { params }) {
         }
 
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
         const body = await request.json();
         const { judgeId } = body;
 
@@ -93,6 +99,12 @@ export async function DELETE(request, { params }) {
         }
 
         event.judges = event.judges.filter(j => j.toString() !== judgeId);
+
+        // Lazy migration: Ensure registrationDeadline exists before saving
+        if (!event.registrationDeadline) {
+            event.registrationDeadline = event.startDate || new Date();
+        }
+
         await event.save();
 
         return NextResponse.json({ message: "Judge removed successfully" });

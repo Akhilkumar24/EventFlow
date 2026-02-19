@@ -2,26 +2,29 @@ import mongoose from "mongoose";
 
 const EventSchema = new mongoose.Schema(
     {
-        title: { 
-            type: String, 
+        title: {
+            type: String,
             required: [true, "Event title is required"],
             trim: true,
             maxlength: [100, "Title cannot exceed 100 characters"]
         },
-        description: { 
-            type: String, 
+        description: {
+            type: String,
             required: [true, "Description is required"],
             maxlength: [2000, "Description cannot exceed 2000 characters"]
         },
-        startDate: { 
-            type: Date, 
-            required: [true, "Start date is required"] 
+        startDate: {
+            type: Date,
+            required: [true, "Start date is required"]
         },
-        endDate: { 
-            type: Date, 
-            required: [true, "End date is required"] 
+        endDate: {
+            type: Date,
+            required: [true, "End date is required"]
         },
-        registrationDeadline: Date,
+        registrationDeadline: {
+            type: Date,
+            required: [true, "Registration deadline is required"]
+        },
         logo: String,
         isPublic: { type: Boolean, default: true },
         organizer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

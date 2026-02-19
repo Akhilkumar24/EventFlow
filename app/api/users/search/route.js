@@ -12,6 +12,7 @@ export async function GET(request) {
         }
 
         await dbConnect();
+        const { searchParams } = new URL(request.url);
         const query = searchParams.get("q") || "";
         const role = searchParams.get("role");
 

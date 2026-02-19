@@ -52,7 +52,8 @@ export async function GET() {
                     ...formattedSub,
                     score: evaluation.score,
                     evaluatedAt: evaluation.evaluatedAt,
-                    feedback: evaluation.feedback
+                    feedback: evaluation.feedback,
+                    criteriaScores: evaluation.criteriaScores
                 });
             } else {
                 pending.push(formattedSub);

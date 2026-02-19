@@ -44,6 +44,7 @@ export default function JudgeDashboard() {
   });
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   const fetchJudgeData = async () => {
     try {
@@ -72,6 +73,21 @@ export default function JudgeDashboard() {
 
   const handleOpenEvaluation = (submission) => {
     setSelectedSubmission(submission);
+    setScores({ innovation: 0, feasibility: 0, presentation: 0, impact: 0, documentation: 0 });
+    setFeedback("");
+    setIsReadOnly(false);
+    setShowScoreModal(true);
+  };
+
+  const handleViewEvaluation = (evaluation) => {
+    setSelectedSubmission(evaluation);
+    if (evaluation.criteriaScores) {
+      setScores(evaluation.criteriaScores);
+    } else {
+      setScores({ innovation: 0, feasibility: 0, presentation: 0, impact: 0, documentation: 0 });
+    }
+    setFeedback(evaluation.feedback || "");
+    setIsReadOnly(true);
     setShowScoreModal(true);
   };
 
@@ -381,7 +397,10 @@ export default function JudgeDashboard() {
                             </div>
                             <p className="text-xs text-slate-500">Grade</p>
                           </div>
-                          <button className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors">
+                          <button
+                            onClick={() => handleViewEvaluation(evaluation)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                          >
                             <MessageSquare className="w-4 h-4" />
                             View
                           </button>
@@ -408,12 +427,14 @@ export default function JudgeDashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Evaluate: {selectedSubmission.teamName}</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {isReadOnly ? "Evaluation Details" : `Evaluate: ${selectedSubmission.teamName}`}
+              </h3>
               <p className="text-slate-500">{selectedSubmission.projectName}</p>
             </div>
 
             {/* Scoring Criteria */}
-            <div className="space-y-4 mb-6">
+            <div className={`space-y-4 mb-6 ${isReadOnly ? 'grid grid-cols-2 gap-4 space-y-0' : ''}`}>
               {[
                 { key: "innovation", label: "Innovation", max: 25 },
                 { key: "feasibility", label: "Feasibility", max: 25 },
@@ -421,19 +442,30 @@ export default function JudgeDashboard() {
                 { key: "impact", label: "Impact", max: 20 },
                 { key: "documentation", label: "Documentation", max: 10 }
               ].map((criteria) => (
-                <div key={criteria.key}>
-                  <div className="flex items-center justify-between mb-2">
+                <div key={criteria.key} className={isReadOnly ? "col-span-1" : ""}>
+                  <div className="flex items-center justify-between mb-1.5">
                     <label className="text-sm font-medium text-slate-700">{criteria.label}</label>
-                    <span className="text-sm text-slate-500">{scores[criteria.key]}/{criteria.max}</span>
+                    <span className="text-sm text-slate-500 font-mono">
+                      {scores[criteria.key] || 0}<span className="text-slate-300">/</span>{criteria.max}
+                    </span>
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={criteria.max}
-                    value={scores[criteria.key]}
-                    onChange={(e) => handleScoreChange(criteria.key, e.target.value)}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                  />
+                  {isReadOnly ? (
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600 rounded-full"
+                        style={{ width: `${((scores[criteria.key] || 0) / criteria.max) * 100}%` }}
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="range"
+                      min={0}
+                      max={criteria.max}
+                      value={scores[criteria.key] || 0}
+                      onChange={(e) => handleScoreChange(criteria.key, e.target.value)}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -443,7 +475,7 @@ export default function JudgeDashboard() {
               <div className="flex items-center justify-between">
                 <span className="font-medium text-slate-700">Total Score</span>
                 <span className="text-2xl font-bold text-slate-900">
-                  {Object.values(scores).reduce((a, b) => a + b, 0)}/100
+                  {Object.values(scores).reduce((a, b) => a + (Number(b) || 0), 0)}/100
                 </span>
               </div>
             </div>
@@ -451,14 +483,16 @@ export default function JudgeDashboard() {
             {/* Feedback */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Feedback (Optional)
+                Feedback {isReadOnly ? "" : "(Optional)"}
               </label>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Provide constructive feedback..."
+                disabled={isReadOnly}
+                className={`w-full px-4 py-2 text-black border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isReadOnly ? 'bg-slate-50 text-slate-600' : ''}`}
+                placeholder={isReadOnly ? "No feedback provided." : "Provide constructive feedback..."}
                 rows={4}
+                readOnly={isReadOnly}
               />
             </div>
 
@@ -469,18 +503,29 @@ export default function JudgeDashboard() {
                   setShowScoreModal(false);
                   setSelectedSubmission(null);
                 }}
-                className="flex-1 px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                className={`flex-1 px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors ${isReadOnly ? 'w-full' : ''}`}
               >
-                Cancel
+                {isReadOnly ? "Close" : "Cancel"}
               </button>
-              <button
-                onClick={handleSubmitScore}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <Save className="w-4 h-4" />
-                Submit Score
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={handleSubmitScore}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Submit Score
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

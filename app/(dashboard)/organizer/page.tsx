@@ -200,16 +200,7 @@ export default function OrganizerDashboard() {
                                         </div>
 
                                         <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedEvent(event);
-                                                    setShowJudgeModal(true);
-                                                }}
-                                                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-indigo-300 text-sm font-medium transition-all shadow-sm flex items-center gap-2"
-                                            >
-                                                <Gavel className="w-4 h-4" />
-                                                Judges
-                                            </button>
+
                                             <Link
                                                 href={`/organizer/events/${event._id}`}
                                                 className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-indigo-300 text-sm font-medium transition-all shadow-sm"

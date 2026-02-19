@@ -1,16 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Input, Label } from "@/components/ui/form";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 
-export default function CreateEventPage() {
+export default function EditEventPage() {
+    const params = useParams(); // returns a readonly object
+    const { id } = params;
     const router = useRouter();
     const { data: session } = useSession();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [tracks, setTracks] = useState([]);
     const [trackInput, setTrackInput] = useState("");
 
@@ -25,6 +28,48 @@ export default function CreateEventPage() {
         rules: "",
         isPublic: true
     });
+
+    useEffect(() => {
+        if (id) {
+            fetchEvent();
+        }
+    }, [id]);
+
+    const fetchEvent = async () => {
+        try {
+            const res = await fetch(`/api/events/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                const event = data.event;
+
+                // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
+                const formatDate = (dateString) => {
+                    if (!dateString) return "";
+                    return new Date(dateString).toISOString().slice(0, 16);
+                };
+
+                setFormData({
+                    title: event.title,
+                    description: event.description,
+                    startDate: formatDate(event.startDate),
+                    endDate: formatDate(event.endDate),
+                    registrationDeadline: formatDate(event.registrationDeadline),
+                    minTeamSize: event.minTeamSize,
+                    maxTeamSize: event.maxTeamSize,
+                    rules: event.rules?.join("\n") || "",
+                    isPublic: event.isPublic
+                });
+                setTracks(event.tracks || []);
+            } else {
+                router.push("/organizer");
+            }
+        } catch (error) {
+            console.error("Error fetching event:", error);
+            router.push("/organizer");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -48,11 +93,11 @@ export default function CreateEventPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
+        setSubmitting(true);
 
         try {
-            const res = await fetch("/api/events", {
-                method: "POST",
+            const res = await fetch(`/api/events/${id}`, {
+                method: "PUT",
                 headers: {
                     "Content-Type": "application/json"
                 },
@@ -64,18 +109,26 @@ export default function CreateEventPage() {
             });
 
             if (res.ok) {
-                router.push("/organizer");
+                router.push(`/organizer/events/${id}`);
             } else {
                 const error = await res.json();
-                alert(error.error || "Failed to create event");
+                alert(error.error || "Failed to update event");
             }
         } catch (error) {
-            console.error("Error creating event:", error);
-            alert("Failed to create event");
+            console.error("Error updating event:", error);
+            alert("Failed to update event");
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-200 py-12">
@@ -83,14 +136,14 @@ export default function CreateEventPage() {
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-10">
                     <Link
-                        href="/organizer"
+                        href={`/organizer/events/${id}`}
                         className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 transition-all shadow-sm"
                     >
                         <ArrowLeft className="w-5 h-5 text-slate-500" />
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900">Create New Event</h1>
-                        <p className="text-slate-500 mt-1">Configure your hackathon, rules, and tracks</p>
+                        <h1 className="text-3xl font-bold text-slate-900">Edit Event</h1>
+                        <p className="text-slate-500 mt-1">Update your hackathon details</p>
                     </div>
                 </div>
 
@@ -304,23 +357,23 @@ export default function CreateEventPage() {
                     {/* Action Buttons */}
                     <div className="flex items-center justify-end gap-4 pt-4 pb-12">
                         <Link
-                            href="/organizer"
+                            href={`/organizer/events/${id}`}
                             className="px-8 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 font-semibold transition-all shadow-sm"
                         >
                             Cancel
                         </Link>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={submitting}
                             className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-blue-700 font-semibold transition-all shadow-lg shadow-indigo-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                            {loading ? (
+                            {submitting ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Creating Event...
+                                    Updating Event...
                                 </>
                             ) : (
-                                "Create Event"
+                                "Update Event"
                             )}
                         </button>
                     </div>

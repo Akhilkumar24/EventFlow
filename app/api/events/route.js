@@ -81,6 +81,7 @@ export async function POST(request) {
       description,
       startDate,
       endDate,
+      registrationDeadline,
       minTeamSize,
       maxTeamSize,
       tracks,
@@ -91,8 +92,8 @@ export async function POST(request) {
     } = body;
 
     // Basic validation
-    if (!title || !startDate || !endDate) {
-      return NextResponse.json({ error: "Missing required fields (title, startDate, endDate)" }, { status: 400 });
+    if (!title || !startDate || !endDate || !registrationDeadline) {
+      return NextResponse.json({ error: "Missing required fields (title, startDate, endDate, registrationDeadline)" }, { status: 400 });
     }
 
     const event = await Event.create({
@@ -100,6 +101,7 @@ export async function POST(request) {
       description,
       startDate,
       endDate,
+      registrationDeadline,
       organizer: session.user.id,
       minTeamSize: minTeamSize || 2,
       maxTeamSize: maxTeamSize || 4,
